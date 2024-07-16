@@ -21,3 +21,6 @@
 go.work
 
 /.idea
+.env
+.air.toml
+Makefile

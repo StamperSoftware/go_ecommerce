@@ -1,10 +1,9 @@
-﻿package main
+package main
 
 import (
 	"flag"
 	"fmt"
 	"github.com/joho/godotenv"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -12,12 +11,10 @@ import (
 )
 
 const version = "1.0.0"
-const cssVersion = "1"
 
 type config struct {
 	port int
 	env  string
-	api  string
 	db   struct {
 		dsn string
 	}
@@ -28,11 +25,10 @@ type config struct {
 }
 
 type application struct {
-	config        config
-	infoLog       *log.Logger
-	errorLog      *log.Logger
-	templateCache map[string]*template.Template
-	version       string
+	config   config
+	infoLog  *log.Logger
+	errorLog *log.Logger
+	version  string
 }
 
 func (app *application) serve() error {
@@ -45,33 +41,31 @@ func (app *application) serve() error {
 		WriteTimeout:      5 * time.Second,
 	}
 
-	app.infoLog.Println(fmt.Sprintf("Starting http server in %s on port %d", app.config.env, app.config.port))
+	app.infoLog.Println(fmt.Sprintf("Starting backend server in %s on port %d", app.config.env, app.config.port))
 
 	return srv.ListenAndServe()
 }
 
 func main() {
 	var cfg config
-	flag.IntVar(&cfg.port, "port", 4000, "Sever port to listen on")
-	flag.StringVar(&cfg.env, "env", "development", "Application Environment {development|production}")
-	flag.StringVar(&cfg.api, "api", "http://localhost:4001/api", "URL for api")
+	flag.IntVar(&cfg.port, "port", 4001, "Sever port to listen on")
+	flag.StringVar(&cfg.env, "env", "development", "Application Environment {development|production|maintenance}")
 
 	flag.Parse()
-	godotenv.Load()
+
+	_ = godotenv.Load()
+
 	cfg.stripe.key = os.Getenv("STRIPE_KEY")
 	cfg.stripe.secret = os.Getenv("STRIPE_SECRET")
 
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stdout, "Error\t", log.Ldate|log.Ltime|log.Lshortfile)
 
-	templateCache := make(map[string]*template.Template)
-
 	app := &application{
-		config:        cfg,
-		infoLog:       infoLog,
-		errorLog:      errorLog,
-		templateCache: templateCache,
-		version:       version,
+		config:   cfg,
+		infoLog:  infoLog,
+		errorLog: errorLog,
+		version:  version,
 	}
 
 	err := app.serve()

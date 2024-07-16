@@ -37,6 +37,10 @@
             </div>
         </div>
         
+        <input type="hidden" name="payment-intent" id="payment-intent">
+        <input type="hidden" name="payment-method" id="payment-method">
+        <input type="hidden" name="payment-name" id="payment-name">
+        <input type="hidden" name="payment-currency" id="payment-currency">
         
     </form>
     
@@ -52,8 +56,29 @@
         const payButton = document.getElementById("pay-button");
         const processing = document.getElementById("processing-payment");
         
-        stripe = Stripe('pk_test_51PcEc82N4aE58Z6fF4nBkj5rityeh6OhjG4Kuit1Z1T6ISassWzHlgWt2yjKLYnBUluMJLW5Pe60OoW9Vtygeemm00hTgPdO4C')
+        stripe = Stripe("{{index .StringMap "publishable_key"}}")
+        const hidePayButton = () => {
+            payButton.classList.add("d-none");
+            processing.classList.remove("d-none");
+        }
+        const showPayButton = () => {
+            payButton.classList.remove("d-none");
+            processing.classList.add("d-none");
+        }
         
+        const showCardError = (msg) => {
+            document.getElementById("card-messages").classList.remove("d-none");
+            document.getElementById("card-messages").classList.remove("alert-success");
+            document.getElementById("card-messages").classList.add("alert-danger");
+            document.getElementById("card-messages").innerText = msg;
+        }
+        
+        const showCardSuccess = () => {
+            document.getElementById("card-messages").classList.remove("d-none");
+            document.getElementById("card-messages").classList.add("alert-success");
+            document.getElementById("card-messages").classList.remove("alert-danger");
+            document.getElementById("card-messages").innerText = "Transaction Successful";
+        }
         
         const val = () => {
             let form = document.getElementById("charge-form")
@@ -61,11 +86,65 @@
             if (form.checkValidity() === false) {
                 this.event.preventDefault();
                 this.event.stopPropagation();
-                form.classList.add("was-validated")
-                return
+                form.classList.add("was-validated");
+                return;
             }
             
-            form.classList.add("was-validated")
+            let amountToCharge = String(parseFloat(document.getElementById("amount").value * 100));
+            let payload = {
+                amount : amountToCharge,
+                currency : "usd",
+            }
+            
+            const requestOptions = {
+                method :"post",
+                headers : {
+                    Accept : 'application/json',
+                    "Content-Type" : 'application/json',
+                },
+                body : JSON.stringify(payload)
+            }
+            
+            fetch('{{.API}}/payment-intent', requestOptions)
+                .then(response => response.text())
+                .then(response => {
+                    let data;
+                    try {
+                        data = JSON.parse(response)
+                        stripe.confirmCardPayment(data.client_secret, {
+                            payment_method : {
+                                card,
+                                billing_details:{
+                                    name: document.getElementById("cardholder-name").value,
+                                }
+                            }
+                        })
+                        .then(result => {
+                            if (result.error) {
+                                showCardError(result.error.message)
+                                showPayButton();
+                            } else if (result.paymentIntent) {
+                                if (result.paymentIntent.status === "succeeded") {
+                                    document.getElementById("payment-method").value = result.paymentIntent.payment_method_types[0];
+                                    document.getElementById("payment-intent").value = result.paymentIntent.id;
+                                    document.getElementById("amount").value = result.paymentIntent.amount;
+                                    document.getElementById("payment-currency").value = result.paymentIntent.currency;
+                                    processing.classList.add("d-none");
+                                    
+                                    showCardSuccess();
+                                    document.getElementById("charge-form").submit();
+                                }
+                            }
+                        })
+                    } catch (err) {
+                        console.log(err);
+                        showCardError("Invalid response from payment gateway");
+                        showPayButton();
+                    }
+                })
+            
+            form.classList.add("was-validated");
+            hidePayButton();
         }
 
         (() => {
