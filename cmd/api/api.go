@@ -1,6 +1,8 @@
 package main
 
 import (
+	"ecommerce/internal/driver"
+	"ecommerce/internal/models"
 	"flag"
 	"fmt"
 	"github.com/joho/godotenv"
@@ -29,6 +31,7 @@ type application struct {
 	infoLog  *log.Logger
 	errorLog *log.Logger
 	version  string
+	DB       models.DBModel
 }
 
 func (app *application) serve() error {
@@ -57,18 +60,27 @@ func main() {
 
 	cfg.stripe.key = os.Getenv("STRIPE_KEY")
 	cfg.stripe.secret = os.Getenv("STRIPE_SECRET")
+	cfg.db.dsn = os.Getenv("DSN")
 
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stdout, "Error\t", log.Ldate|log.Ltime|log.Lshortfile)
 
+	conn, err := driver.OpenDB(cfg.db.dsn)
+	defer conn.Close()
+
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+	
 	app := &application{
 		config:   cfg,
 		infoLog:  infoLog,
 		errorLog: errorLog,
 		version:  version,
+		DB:       models.DBModel{DB: conn},
 	}
 
-	err := app.serve()
+	err = app.serve()
 
 	if err != nil {
 		app.errorLog.Println(err)

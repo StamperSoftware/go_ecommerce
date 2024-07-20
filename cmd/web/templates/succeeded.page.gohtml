@@ -14,6 +14,9 @@ Payment Succeeded
         <p>Payment Method: {{index .Data "payment-method"}}</p>
         <p>Payment Amount: {{index .Data "payment-amount"}}</p>
         <p>Currency  {{index .Data "payment-currency"}}</p>
+        <p>Last Four  {{index .Data "last-four"}}</p>
+        <p>Bank Return Code  {{index .Data "bank-return-code"}}</p>
+        <p>Expiration Date {{index .Data "expiration-month"}}/{{index .Data "expiration-year"}}</p>
     
 {{end}}
 

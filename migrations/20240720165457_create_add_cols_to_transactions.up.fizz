@@ -1,0 +1,2 @@
+add_column("transactions", "exp_month", "integer", {"default":0})
+add_column("transactions", "exp_year", "integer", {"default":0})

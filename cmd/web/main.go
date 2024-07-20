@@ -1,6 +1,8 @@
 ﻿package main
 
 import (
+	"ecommerce/internal/driver"
+	"ecommerce/internal/models"
 	"flag"
 	"fmt"
 	"github.com/joho/godotenv"
@@ -33,6 +35,7 @@ type application struct {
 	errorLog      *log.Logger
 	templateCache map[string]*template.Template
 	version       string
+	DB            models.DBModel
 }
 
 func (app *application) serve() error {
@@ -55,14 +58,22 @@ func main() {
 	flag.IntVar(&cfg.port, "port", 4000, "Sever port to listen on")
 	flag.StringVar(&cfg.env, "env", "development", "Application Environment {development|production}")
 	flag.StringVar(&cfg.api, "api", "http://localhost:4001/api", "URL for api")
-
 	flag.Parse()
 	godotenv.Load()
 	cfg.stripe.key = os.Getenv("STRIPE_KEY")
 	cfg.stripe.secret = os.Getenv("STRIPE_SECRET")
+	cfg.db.dsn = os.Getenv("DSN")
 
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stdout, "Error\t", log.Ldate|log.Ltime|log.Lshortfile)
+
+	conn, err := driver.OpenDB(cfg.db.dsn)
+
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+
+	defer conn.Close()
 
 	templateCache := make(map[string]*template.Template)
 
@@ -72,9 +83,10 @@ func main() {
 		errorLog:      errorLog,
 		templateCache: templateCache,
 		version:       version,
+		DB:            models.DBModel{DB: conn},
 	}
 
-	err := app.serve()
+	err = app.serve()
 
 	if err != nil {
 		app.errorLog.Println(err)
