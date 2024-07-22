@@ -1,0 +1,23 @@
+{{template "base" .}}
+
+{{define "title"}}
+Virtual Terminal Receipt
+{{end}}
+    
+
+{{define "content"}}
+    {{$txn := index .Data "txn"}}
+    <h2 class="mt-5">Virtual Terminal Receipt:</h2>
+        <hr>
+        <p>Payment Intent: {{$txn.PaymentIntentID}}</p>
+        <p>Email: {{$txn.Email}}</p>
+        <p>Payment Method: {{$txn.PaymentMethodID}}</p>
+        <p>Payment Amount: {{$txn.PaymentAmount}}</p>
+        <p>Currency  {{$txn.PaymentCurrency}}</p>
+        <p>Last Four  {{$txn.LastFour}}</p>
+        <p>Bank Return Code  {{$txn.BankReturnCode}}</p>
+        <p>Expiration Date {{$txn.ExpMonth}}/{{$txn.ExpYear}}</p>
+    
+{{end}}
+
+    

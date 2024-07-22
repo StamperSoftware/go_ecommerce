@@ -3,8 +3,10 @@
 import (
 	"ecommerce/internal/driver"
 	"ecommerce/internal/models"
+	"encoding/gob"
 	"flag"
 	"fmt"
+	"github.com/alexedwards/scs/v2"
 	"github.com/joho/godotenv"
 	"html/template"
 	"log"
@@ -15,6 +17,8 @@ import (
 
 const version = "1.0.0"
 const cssVersion = "1"
+
+var session *scs.SessionManager
 
 type config struct {
 	port int
@@ -36,6 +40,7 @@ type application struct {
 	templateCache map[string]*template.Template
 	version       string
 	DB            models.DBModel
+	Session       *scs.SessionManager
 }
 
 func (app *application) serve() error {
@@ -54,12 +59,16 @@ func (app *application) serve() error {
 }
 
 func main() {
+
+	gob.Register(TransactionData{})
+
 	var cfg config
 	flag.IntVar(&cfg.port, "port", 4000, "Sever port to listen on")
 	flag.StringVar(&cfg.env, "env", "development", "Application Environment {development|production}")
 	flag.StringVar(&cfg.api, "api", "http://localhost:4001/api", "URL for api")
 	flag.Parse()
-	godotenv.Load()
+	_ = godotenv.Load()
+
 	cfg.stripe.key = os.Getenv("STRIPE_KEY")
 	cfg.stripe.secret = os.Getenv("STRIPE_SECRET")
 	cfg.db.dsn = os.Getenv("DSN")
@@ -75,6 +84,9 @@ func main() {
 
 	defer conn.Close()
 
+	session = scs.New()
+	session.Lifetime = 24 * time.Hour
+
 	templateCache := make(map[string]*template.Template)
 
 	app := &application{
@@ -84,6 +96,7 @@ func main() {
 		templateCache: templateCache,
 		version:       version,
 		DB:            models.DBModel{DB: conn},
+		Session:       session,
 	}
 
 	err = app.serve()

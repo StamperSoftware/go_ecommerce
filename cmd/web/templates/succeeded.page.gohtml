@@ -9,7 +9,7 @@ Payment Succeeded
     <h2 class="mt-5">Payment Succeeded</h2>
         <hr>
         <p>Payment Intent: {{index .Data "payment-intent"}}</p>
-        <p>Cardholder: {{index .Data "cardholder"}}</p>
+        <p>Customer Name: {{index .Data "first-name"}} {{index .Data "last-name"}}</p>
         <p>Email: {{index .Data "email"}}</p>
         <p>Payment Method: {{index .Data "payment-method"}}</p>
         <p>Payment Amount: {{index .Data "payment-amount"}}</p>
