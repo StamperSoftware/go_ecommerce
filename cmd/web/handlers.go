@@ -273,7 +273,7 @@ func (app *application) Receipt(w http.ResponseWriter, r *http.Request) {
 func (app *application) VirtualTerminalReceipt(w http.ResponseWriter, r *http.Request) {
 
 	txn := app.Session.Get(r.Context(), "receipt").(TransactionData)
-	
+
 	app.Session.Remove(r.Context(), "receipt")
 	data := make(map[string]interface{})
 	data["txn"] = txn
@@ -281,6 +281,37 @@ func (app *application) VirtualTerminalReceipt(w http.ResponseWriter, r *http.Re
 	err := app.renderTemplate(w, r, "virtual-terminal-receipt", &templateData{
 		Data: data,
 	})
+
+	if err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) BronzePlan(w http.ResponseWriter, r *http.Request) {
+
+	widget, err := app.DB.GetWidget(2)
+
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+
+	data := make(map[string]interface{})
+
+	data["widget"] = widget
+
+	err = app.renderTemplate(w, r, "bronze-plan", &templateData{
+		Data: data,
+	})
+
+	if err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) BronzePlanReceipt(w http.ResponseWriter, r *http.Request) {
+
+	err := app.renderTemplate(w, r, "receipt-plan", &templateData{})
 
 	if err != nil {
 		app.errorLog.Println(err)
