@@ -2,7 +2,12 @@ package models
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"errors"
+	"golang.org/x/crypto/bcrypt"
+	"log"
+	"strings"
 	"time"
 )
 
@@ -179,4 +184,94 @@ func (m *DBModel) CreateCustomer(c Customer) (int, error) {
 	}
 
 	return int(id), nil
+}
+
+func (m *DBModel) CreateToken(token *Token, user User) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	query := `delete from tokens where user_id = ?`
+
+	_, err := m.DB.ExecContext(ctx, query, user.ID)
+
+	if err != nil {
+		return err
+	}
+
+	query = `
+	insert into tokens
+	(user_id, name, email, token_hash, expires_on, created_at, updated_at)
+	value (?,?,?,?,?,?,?)
+`
+
+	_, err = m.DB.ExecContext(ctx, query, user.ID, user.LastName, user.Email, token.Hash, token.Expiry, time.Now(), time.Now())
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *DBModel) GetUserByEmail(email string) (User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	email = strings.ToLower(email)
+	var user User
+
+	query := `select id, first_name, last_name, email, password, created_at, updated_at from users where email = ?`
+
+	row := m.DB.QueryRowContext(ctx, query, email)
+	err := row.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Password, &user.CreatedAt, &user.UpdatedAt)
+
+	if err != nil {
+		return user, err
+	}
+
+	return user, nil
+}
+
+func (m *DBModel) GetUserByToken(token string) (*User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	tokenHash := sha256.Sum256([]byte(token))
+	var user User
+
+	query := `
+select u.id, u.first_name, u.last_name, u.email 
+from users u inner join tokens t on (u.id = t.user_id) where t.token_hash = ? and t.expires_on > ?`
+
+	err := m.DB.QueryRowContext(ctx, query, tokenHash[:], time.Now()).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email)
+
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return &user, nil
+}
+func (m *DBModel) Authenticate(email, password string) (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var id int
+	var hashedPassword string
+
+	row := m.DB.QueryRowContext(ctx, "select id, password from users where email = ?", email)
+
+	err := row.Scan(&id, &hashedPassword)
+
+	if err != nil {
+		return id, err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+
+	if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+		return 0, errors.New("incorrect password")
+	} else if err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }

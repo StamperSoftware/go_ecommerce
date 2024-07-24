@@ -10,15 +10,58 @@ import (
 
 func (app *application) VirtualTerminal(w http.ResponseWriter, r *http.Request) {
 
-	if err := app.renderTemplate(w, r, "terminal", &templateData{}, "stripe-js"); err != nil {
+	if err := app.renderTemplate(w, r, "terminal", &templateData{}); err != nil {
 		app.errorLog.Println(err)
 	}
 }
+
 func (app *application) Home(w http.ResponseWriter, r *http.Request) {
 
-	if err := app.renderTemplate(w, r, "home", &templateData{}); err != nil {
+	err := app.renderTemplate(w, r, "home", &templateData{})
+
+	if err != nil {
 		app.errorLog.Println(err)
 	}
+}
+
+func (app *application) Login(w http.ResponseWriter, r *http.Request) {
+
+	err := app.renderTemplate(w, r, "login", &templateData{})
+	if err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) PostLogin(w http.ResponseWriter, r *http.Request) {
+
+	err := app.Session.RenewToken(r.Context())
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+	err = r.ParseForm()
+	if err != nil {
+		app.errorLog.Println(err)
+		return
+	}
+
+	email := r.Form.Get("email")
+	password := r.Form.Get("password")
+
+	id, err := app.DB.Authenticate(email, password)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	app.Session.Put(r.Context(), "userID", id)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (app *application) Logout(w http.ResponseWriter, r *http.Request) {
+	_ = app.Session.Destroy(r.Context())
+	_ = app.Session.RenewToken(r.Context())
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
 type TransactionData struct {

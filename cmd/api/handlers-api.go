@@ -4,10 +4,14 @@ import (
 	"ecommerce/internal/cards"
 	"ecommerce/internal/models"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/stripe/stripe-go/v79"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 )
 
 type stripePayload struct {
@@ -248,4 +252,176 @@ func (app *application) SaveOrder(order models.Order) (int, error) {
 	}
 
 	return id, nil
+}
+
+func (app *application) CreateAuthToken(w http.ResponseWriter, r *http.Request) {
+	var userInput struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	err := app.readJSON(w, r, &userInput)
+
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	user, err := app.DB.GetUserByEmail(userInput.Email)
+
+	if err != nil {
+		_ = app.invalidCredentials(w)
+		return
+	}
+
+	validPassword, err := app.doesPasswordMatch(user.Password, userInput.Password)
+
+	if err != nil {
+		_ = app.invalidCredentials(w)
+		return
+	}
+
+	if !validPassword {
+		_ = app.invalidCredentials(w)
+		return
+	}
+
+	token, err := models.GenerateToken(user.ID, 24*time.Hour, models.ScopeAuthentication)
+
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	err = app.DB.CreateToken(token, user)
+
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	var payload struct {
+		Error   bool          `json:"error"`
+		Message string        `json:"message"`
+		Token   *models.Token `json:"authentication_token"`
+	}
+
+	payload.Error = false
+	payload.Message = fmt.Sprintf("token for %s created", userInput.Email)
+	payload.Token = token
+
+	_ = app.writeJSON(w, http.StatusOK, payload)
+}
+
+func (app *application) authenticateToken(r *http.Request) (*models.User, error) {
+
+	authorizationHeader := r.Header.Get("Authorization")
+
+	if authorizationHeader == "" {
+		return nil, errors.New("no authorization header")
+	}
+
+	headerParts := strings.Split(authorizationHeader, " ")
+	if len(headerParts) != 2 || headerParts[0] != "Bearer" {
+		return nil, errors.New("no authorization header")
+	}
+
+	token := headerParts[1]
+
+	if len(token) != 26 {
+		return nil, errors.New("token wrong size")
+	}
+
+	user, err := app.DB.GetUserByToken(token)
+
+	if err != nil {
+		return nil, errors.New("invalid user")
+	}
+
+	return user, nil
+}
+
+func (app *application) IsAuthenticated(w http.ResponseWriter, r *http.Request) {
+
+	user, err := app.authenticateToken(r)
+
+	if err != nil {
+		_ = app.invalidCredentials(w)
+		return
+	}
+
+	var payload struct {
+		Error   bool   `json:"error"`
+		Message string `json:"message"`
+	}
+
+	payload.Error = false
+	payload.Message = fmt.Sprintf("authenticated user %s", user.Email)
+
+	_ = app.writeJSON(w, http.StatusOK, payload)
+}
+
+func (app *application) VirtualTerminalPaymentSucceeded(w http.ResponseWriter, r *http.Request) {
+	var txnData struct {
+		PaymentAmount   int    `json:"amount"`
+		PaymentCurrency string `json:"currency"`
+		FirstName       string `json:"first_name"`
+		LastName        string `json:"last_name"`
+		Email           string `json:"email"`
+		PaymentIntent   string `json:"payment_intent"`
+		PaymentMethod   string `json:"payment_method"`
+		BankReturnCode  string `json:"bank_return_code"`
+		ExpMonth        int    `json:"exp_month"`
+		ExpYear         int    `json:"exp_year"`
+		LastFour        string `json:"last_four"`
+	}
+
+	err := app.readJSON(w, r, &txnData)
+
+	if err != nil {
+		_ = app.badRequest(w, r, err)
+		return
+	}
+
+	card := cards.Card{
+		Secret: app.config.stripe.secret,
+		Key:    app.config.stripe.key,
+	}
+
+	pi, err := card.GetPaymentIntent(txnData.PaymentIntent)
+
+	if err != nil {
+		_ = app.badRequest(w, r, err)
+		return
+	}
+	pm, err := card.GetPaymentMethod(txnData.PaymentMethod)
+
+	if err != nil {
+		_ = app.badRequest(w, r, err)
+		return
+	}
+
+	txnData.LastFour = pm.Card.Last4
+	txnData.ExpMonth = int(pm.Card.ExpMonth)
+	txnData.ExpYear = int(pm.Card.ExpYear)
+
+	txn := models.Transaction{
+		TransactionStatusID: 2,
+		ExpMonth:            txnData.ExpMonth,
+		ExpYear:             txnData.ExpYear,
+		Currency:            txnData.PaymentCurrency,
+		LastFour:            txnData.LastFour,
+		BankReturnCode:      pi.LatestCharge.ID,
+		Amount:              txnData.PaymentAmount,
+		PaymentMethod:       txnData.PaymentMethod,
+		PaymentIntent:       txnData.PaymentIntent,
+	}
+	_, err = app.SaveTransaction(txn)
+
+	if err != nil {
+		_ = app.badRequest(w, r, err)
+		return
+	}
+
+	_ = app.writeJSON(w, http.StatusOK, txn)
 }

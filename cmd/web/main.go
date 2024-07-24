@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
+	"github.com/alexedwards/scs/mysqlstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/joho/godotenv"
 	"html/template"
@@ -85,6 +86,7 @@ func main() {
 	defer conn.Close()
 
 	session = scs.New()
+	session.Store = mysqlstore.New(conn)
 	session.Lifetime = 24 * time.Hour
 
 	templateCache := make(map[string]*template.Template)

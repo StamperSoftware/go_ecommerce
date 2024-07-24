@@ -25,9 +25,7 @@
               <li class="nav-item">
                 <a class="nav-link active" aria-current="page" href="/">Home</a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/virtual-terminal">Virtual Terminal</a>
-              </li>
+              
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                   Products
@@ -36,6 +34,18 @@
                   <li><a class="dropdown-item" href="/widget/1">Buy One Widget</a></li>
                   <li><a class="dropdown-item" href="/plans/bronze">Subscription</a></li>
                 </ul>
+              </li>
+              <li class="nav-item d-none" id="vt-link">
+                <a class="nav-link" href="/admin/virtual-terminal">Virtual Terminal</a>
+              </li>
+            </ul>
+            
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+              <li class="nav-item d-none" id="logout-link">
+                <a href="#" onclick="logout()" class="nav-link">Logout</a>
+              </li>
+              <li class="nav-item d-none" id="login-link">
+                <a href="/login" class="nav-link">Login</a>
               </li>
             </ul>
           </div>
@@ -49,6 +59,54 @@
       </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+      const loginLink = document.getElementById("login-link")
+      const vtLink = document.getElementById("vt-link")
+      const logoutLink = document.getElementById("logout-link")
+      
+      document.addEventListener("DOMContentLoaded", () =>{
+        console.log(localStorage.getItem("token"))
+        if (localStorage.getItem("token") !== null) {
+          logoutLink.classList.remove("d-none");
+          vtLink.classList.remove("d-none");
+        } else {
+          loginLink.classList.remove("d-none");
+        }
+      });
+      
+      const logout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("token_expiry");
+        location.href = "/logout"
+      }
+      
+      const checkAuth = () => {
+        const token = localStorage.getItem("token");
+        if (token === null) {
+          location.href="/login";
+        } else {
+          const myHeaders = new Headers();
+          myHeaders.append("Content-Type", "application/json");
+          myHeaders.append("Authorization", `Bearer ${token}`);
+          
+          
+          const requestOption = {
+            method: "POST",
+            headers: myHeaders,
+          }
+          
+          fetch("{{.API}}/is-authenticated", requestOption)
+            .then(response => response.json())
+            .then(data => {
+              if (data.error === true) {
+                location.href='/login';
+              } else {
+                console.log('logged in')
+              }
+            })
+        }
+      }
+    </script>
     {{block "js" .}} {{end}}
   </body>
 </html>

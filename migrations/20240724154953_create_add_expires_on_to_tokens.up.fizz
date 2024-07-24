@@ -1,0 +1,1 @@
+add_column("tokens", "expires_on", "timestamp", {})
