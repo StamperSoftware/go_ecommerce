@@ -176,6 +176,8 @@ func (app *application) CreateCustomerAndSubscribe(w http.ResponseWriter, r *htt
 			LastFour:            data.LastFour,
 			TransactionStatusID: 2,
 			Amount:              amount,
+			PaymentIntent:       sub.ID,
+			PaymentMethod:       data.PaymentMethod,
 		}
 
 		txnID, err := app.SaveTransaction(txn)
@@ -574,5 +576,97 @@ func (app *application) AllSubscriptions(w http.ResponseWriter, r *http.Request)
 	}
 
 	app.writeJSON(w, http.StatusOK, allSubscriptions)
+
+}
+
+func (app *application) Refund(w http.ResponseWriter, r *http.Request) {
+	var chargeToRefund struct {
+		ID            int    `json:"id"`
+		PaymentIntent string `json:"pi"`
+		Amount        int    `json:"amount"`
+		Currency      string `json:"currency"`
+	}
+
+	err := app.readJSON(w, r, &chargeToRefund)
+
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	card := cards.Card{
+		Secret:   app.config.stripe.secret,
+		Key:      app.config.stripe.key,
+		Currency: chargeToRefund.Currency,
+	}
+
+	err = card.Refund(chargeToRefund.PaymentIntent, chargeToRefund.Amount)
+
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	err = app.DB.UpdateOrderStatus(chargeToRefund.ID, 2)
+
+	if err != nil {
+		app.badRequest(w, r, errors.New("charge was refunded but the database could not be updated"))
+		return
+	}
+
+	var resp struct {
+		Error   bool   `json:"error"`
+		Message string `json:"message"`
+	}
+	resp.Error = false
+	resp.Message = "Charge Refunded"
+
+	app.writeJSON(w, http.StatusOK, resp)
+
+}
+
+func (app *application) CancelSubscription(w http.ResponseWriter, r *http.Request) {
+
+	var subToCancel struct {
+		ID            int    `json:"id"`
+		PaymentIntent string `json:"pi"`
+		Currency      string `json:"currency"`
+	}
+
+	err := app.readJSON(w, r, &subToCancel)
+
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	card := cards.Card{
+		Secret:   app.config.stripe.secret,
+		Key:      app.config.stripe.key,
+		Currency: subToCancel.Currency,
+	}
+
+	err = card.CancelSubscription(subToCancel.PaymentIntent)
+
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	err = app.DB.UpdateOrderStatus(subToCancel.ID, 3)
+
+	if err != nil {
+		app.badRequest(w, r, errors.New("subscription was cancelled but the database could not be updated"))
+		return
+	}
+
+	var resp struct {
+		Error   bool   `json:"error"`
+		Message string `json:"message"`
+	}
+	resp.Error = false
+	resp.Message = "Subscription Cancelled"
+
+	app.writeJSON(w, http.StatusOK, resp)
 
 }
