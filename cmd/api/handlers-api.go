@@ -512,8 +512,8 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		app.badRequest(w, r, err)
 		return
 	}
-	password, err := encryptor.Decrypt(payload.Password)
-	newHash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(payload.Password), 12)
 
 	if err != nil {
 		app.badRequest(w, r, err)
