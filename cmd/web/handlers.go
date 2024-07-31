@@ -207,38 +207,6 @@ func (app *application) PaymentSucceeded(w http.ResponseWriter, r *http.Request)
 	http.Redirect(w, r, "/receipt", http.StatusSeeOther)
 }
 
-func (app *application) VirtualTerminalPaymentSucceeded(w http.ResponseWriter, r *http.Request) {
-
-	txnData, err := app.GetTransactionData(r)
-
-	if err != nil {
-		app.errorLog.Println(err)
-		return
-	}
-
-	txn := models.Transaction{
-		TransactionStatusID: 2,
-		ExpMonth:            txnData.ExpMonth,
-		ExpYear:             txnData.ExpYear,
-		Currency:            txnData.PaymentCurrency,
-		LastFour:            txnData.LastFour,
-		BankReturnCode:      txnData.BankReturnCode,
-		Amount:              txnData.PaymentAmount,
-		PaymentIntent:       txnData.PaymentIntentID,
-		PaymentMethod:       txnData.PaymentMethodID,
-	}
-
-	_, err = app.SaveTransaction(txn)
-
-	if err != nil {
-		app.errorLog.Println(err)
-		return
-	}
-
-	app.Session.Put(r.Context(), "receipt", txnData)
-	http.Redirect(w, r, "virtual-terminal-receipt", http.StatusSeeOther)
-}
-
 func (app *application) SaveCustomer(firstName, lastName, email string) (int, error) {
 	customer := models.Customer{
 		FirstName: firstName,
@@ -308,23 +276,6 @@ func (app *application) Receipt(w http.ResponseWriter, r *http.Request) {
 	data["txn"] = txn
 
 	err := app.renderTemplate(w, r, "receipt", &templateData{
-		Data: data,
-	})
-
-	if err != nil {
-		app.errorLog.Println(err)
-	}
-}
-
-func (app *application) VirtualTerminalReceipt(w http.ResponseWriter, r *http.Request) {
-
-	txn := app.Session.Get(r.Context(), "receipt").(TransactionData)
-
-	app.Session.Remove(r.Context(), "receipt")
-	data := make(map[string]interface{})
-	data["txn"] = txn
-
-	err := app.renderTemplate(w, r, "virtual-terminal-receipt", &templateData{
 		Data: data,
 	})
 
@@ -410,6 +361,42 @@ func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	err = app.renderTemplate(w, r, "reset-password", &templateData{Data: data})
 
 	if err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) AllSales(w http.ResponseWriter, r *http.Request) {
+
+	if err := app.renderTemplate(w, r, "all-sales", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) AllSubscriptions(w http.ResponseWriter, r *http.Request) {
+
+	if err := app.renderTemplate(w, r, "all-subscriptions", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) Sale(w http.ResponseWriter, r *http.Request) {
+
+	stringMap := make(map[string]string)
+	stringMap["title"] = "Sale"
+	stringMap["cancel"] = "/admin/all-sales"
+
+	if err := app.renderTemplate(w, r, "sale", &templateData{StringMap: stringMap}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) Subscription(w http.ResponseWriter, r *http.Request) {
+
+	stringMap := make(map[string]string)
+	stringMap["title"] = "Subscription"
+	stringMap["cancel"] = "/admin/all-subscriptions"
+
+	if err := app.renderTemplate(w, r, "sale", &templateData{StringMap: stringMap}); err != nil {
 		app.errorLog.Println(err)
 	}
 }

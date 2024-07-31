@@ -22,7 +22,6 @@ type templateData struct {
 	CSSVersion        string
 	StripeSecret      string
 	StripePublishable string
-	EncryptSecret     string
 }
 
 var functions = template.FuncMap{
@@ -42,7 +41,11 @@ func (app *application) addDefaultData(td *templateData, r *http.Request) *templ
 	td.API = app.config.api
 	td.StripePublishable = app.config.stripe.key
 	td.StripeSecret = app.config.stripe.secret
-	td.EncryptSecret = app.config.secretkey
+
+	if app.Session.Exists(r.Context(), "userID") {
+		td.IsAuthenticated = true
+	}
+
 	return td
 }
 
@@ -54,7 +57,7 @@ func (app *application) renderTemplate(w http.ResponseWriter, r *http.Request, p
 
 	_, isTemplateInMap := app.templateCache[templateToRender]
 
-	if app.config.env == "production" && isTemplateInMap {
+	if isTemplateInMap {
 		t = app.templateCache[templateToRender]
 	} else {
 		t, err = app.parseTemplate(partials, page, templateToRender)

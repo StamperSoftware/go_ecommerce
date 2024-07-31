@@ -35,18 +35,35 @@
                   <li><a class="dropdown-item" href="/plans/bronze">Subscription</a></li>
                 </ul>
               </li>
-              <li class="nav-item d-none" id="vt-link">
-                <a class="nav-link" href="/admin/virtual-terminal">Virtual Terminal</a>
-              </li>
+                
+              {{if eq .IsAuthenticated true}}
+                <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    Admin
+                  </a>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="/admin/virtual-terminal">Virtual Terminal</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/admin/all-sales">All Sales</a></li>
+                    <li><a class="dropdown-item" href="/admin/all-subscriptions">All Subscriptions</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a href="/logout" class="dropdown-item">Logout</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                  </ul>
+                </li>
+              {{end}}
             </ul>
-            
+              
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-              <li class="nav-item d-none" id="logout-link">
-                <a href="#" onclick="logout()" class="nav-link">Logout</a>
-              </li>
-              <li class="nav-item d-none" id="login-link">
-                <a href="/login" class="nav-link">Login</a>
-              </li>
+              {{if eq .IsAuthenticated true}}
+                <li class="nav-item" id="logout-link">
+                  <a href="/logout" class="nav-link">Logout</a>
+                </li>
+              {{else}}
+                <li class="nav-item" id="login-link">
+                  <a href="/login" class="nav-link">Login</a>
+                </li>
+              {{end}}
             </ul>
           </div>
         </div>
@@ -60,25 +77,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script>
-      const loginLink = document.getElementById("login-link")
-      const vtLink = document.getElementById("vt-link")
-      const logoutLink = document.getElementById("logout-link")
-      
-      document.addEventListener("DOMContentLoaded", () =>{
-        console.log(localStorage.getItem("token"))
-        if (localStorage.getItem("token") !== null) {
-          logoutLink.classList.remove("d-none");
-          vtLink.classList.remove("d-none");
-        } else {
-          loginLink.classList.remove("d-none");
-        }
-      });
-      
-      const logout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("token_expiry");
-        location.href = "/logout"
-      }
       
       const checkAuth = () => {
         const token = localStorage.getItem("token");
@@ -106,6 +104,15 @@
             })
         }
       }
+      
+          
+    const formatCurrency = (amount) => {
+        let c = parseFloat(amount/100);
+        return c.toLocaleString("en-US", {
+            style : "currency",
+            currency : "USD",
+        })
+    }
     </script>
     {{block "js" .}} {{end}}
   </body>

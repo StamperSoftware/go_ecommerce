@@ -1,0 +1,54 @@
+{{template "base" .}}
+
+{{define "title"}}{{index .StringMap "title"}}{{end}}
+
+{{define "content"}} 
+    <h2 class="mt-5">{{index .StringMap "title"}}</h2>
+    <hr>
+    <div>
+        <strong>Order No:</strong> <span id="order-no"></span><br>
+        <strong>Customer:</strong> <span id="customer"></span><br>
+        <strong>Product:</strong> <span id="product"></span><br>
+        <strong>Quantity:</strong> <span id="quantity"></span><br>
+        <strong>Total Sale:</strong> <span id="amount"></span><br>
+    </div>
+
+    <hr>
+
+    <a href="{{index .StringMap "cancel"}}" class="btn btn-info">Cancel</a>
+    <a href="#" class="btn btn-warning">Refund Order</a>
+{{end}}
+
+{{define "js"}}
+<script>
+    
+    const token = localStorage.getItem("token");
+    const id = window.location.pathname.split('/').pop();
+    
+    const requestOptions = {
+        method : "post",
+        headers : {
+            "Accept" : "application/json",
+            "Content-Type" : "application/json",
+            "Authorization" : `Bearer ${token}`,
+        },
+    }
+    
+    fetch(`{{.API}}/admin/sales/${id}`, requestOptions)
+        .then(response => response.json())
+        .then(sale => {
+            if (!sale) {
+                return;
+            }
+            
+            document.getElementById("order-no").innerHTML = sale.id;
+            document.getElementById("customer").innerHTML = `${sale.customer.first_name}, ${sale.customer.last_name}`;
+            document.getElementById("product").innerHTML = sale.widget.id;
+            document.getElementById("quantity").innerHTML = sale.quantity;
+            document.getElementById("amount").innerHTML = formatCurrency(sale.transaction.amount);
+            
+            
+        })
+</script>
+    
+{{end}}
