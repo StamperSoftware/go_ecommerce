@@ -32,6 +32,8 @@ type config struct {
 		secret string
 		key    string
 	}
+	secretkey string
+	frontend  string
 }
 
 type application struct {
@@ -73,6 +75,8 @@ func main() {
 	cfg.stripe.key = os.Getenv("STRIPE_KEY")
 	cfg.stripe.secret = os.Getenv("STRIPE_SECRET")
 	cfg.db.dsn = os.Getenv("DSN")
+	cfg.secretkey = os.Getenv("SIGNED_MAIL_SECRET")
+	cfg.frontend = os.Getenv("FRONTEND_LINK")
 
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stdout, "Error\t", log.Ldate|log.Ltime|log.Lshortfile)

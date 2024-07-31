@@ -22,6 +22,7 @@ type templateData struct {
 	CSSVersion        string
 	StripeSecret      string
 	StripePublishable string
+	EncryptSecret     string
 }
 
 var functions = template.FuncMap{
@@ -41,6 +42,7 @@ func (app *application) addDefaultData(td *templateData, r *http.Request) *templ
 	td.API = app.config.api
 	td.StripePublishable = app.config.stripe.key
 	td.StripeSecret = app.config.stripe.secret
+	td.EncryptSecret = app.config.secretkey
 	return td
 }
 

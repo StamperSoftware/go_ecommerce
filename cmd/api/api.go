@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -24,6 +25,14 @@ type config struct {
 		secret string
 		key    string
 	}
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+	}
+	secretkey string
+	frontend  string
 }
 
 type application struct {
@@ -61,6 +70,12 @@ func main() {
 	cfg.stripe.key = os.Getenv("STRIPE_KEY")
 	cfg.stripe.secret = os.Getenv("STRIPE_SECRET")
 	cfg.db.dsn = os.Getenv("DSN")
+	cfg.smtp.username = os.Getenv("SMTP_USERNAME")
+	cfg.smtp.password = os.Getenv("SMTP_PASSWORD")
+	cfg.smtp.port, _ = strconv.Atoi(os.Getenv("SMTP_PORT"))
+	cfg.smtp.host = os.Getenv("SMTP_HOST")
+	cfg.secretkey = os.Getenv("SIGNED_MAIL_SECRET")
+	cfg.frontend = os.Getenv("FRONTEND_LINK")
 
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stdout, "Error\t", log.Ldate|log.Ltime|log.Lshortfile)
@@ -71,7 +86,7 @@ func main() {
 	if err != nil {
 		errorLog.Fatal(err)
 	}
-	
+
 	app := &application{
 		config:   cfg,
 		infoLog:  infoLog,

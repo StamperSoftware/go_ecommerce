@@ -25,6 +25,8 @@ func (app *application) routes() http.Handler {
 	mux.Get("/plans/bronze", app.BronzePlan)
 	mux.Get("/receipt/bronze", app.BronzePlanReceipt)
 	mux.Post("/payment-succeeded", app.PaymentSucceeded)
+	mux.Get("/forgot-password", app.ForgotPassword)
+	mux.Get("/reset-password", app.ResetPassword)
 
 	mux.Get("/widget/{id}", app.BuyOnce)
 

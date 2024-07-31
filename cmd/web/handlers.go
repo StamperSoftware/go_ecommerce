@@ -2,7 +2,10 @@
 
 import (
 	"ecommerce/internal/cards"
+	"ecommerce/internal/encryption"
 	"ecommerce/internal/models"
+	"ecommerce/internal/urlsigner"
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
@@ -355,6 +358,56 @@ func (app *application) BronzePlan(w http.ResponseWriter, r *http.Request) {
 func (app *application) BronzePlanReceipt(w http.ResponseWriter, r *http.Request) {
 
 	err := app.renderTemplate(w, r, "receipt-plan", &templateData{})
+
+	if err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+
+	err := app.renderTemplate(w, r, "forgot-password", &templateData{})
+
+	if err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	email := r.URL.Query().Get("email")
+	url := r.RequestURI
+	testURL := fmt.Sprintf("%s%s", app.config.frontend, url)
+
+	signer := urlsigner.Signer{Secret: []byte(app.config.secretkey)}
+	valid := signer.VerifyToken(testURL)
+
+	if !valid {
+		app.errorLog.Println("Invalid URL")
+		return
+	}
+
+	isExpired := signer.IsTokenExpired(testURL, 60)
+
+	if isExpired {
+		app.errorLog.Println("Link expired")
+		return
+	}
+
+	encryptor := encryption.Encryption{
+		Key: []byte(app.config.secretkey),
+	}
+
+	encryptedEmail, err := encryptor.Encrypt(email)
+
+	if err != nil {
+		app.errorLog.Println("Encryption Failed", err)
+		return
+	}
+
+	data := make(map[string]interface{})
+	data["email"] = encryptedEmail
+
+	err = app.renderTemplate(w, r, "reset-password", &templateData{Data: data})
 
 	if err != nil {
 		app.errorLog.Println(err)

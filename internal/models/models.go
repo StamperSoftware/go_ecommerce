@@ -275,3 +275,16 @@ func (m *DBModel) Authenticate(email, password string) (int, error) {
 
 	return id, nil
 }
+
+func (m *DBModel) UpdatePasswordForUser(u User, hash string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	query := `update users set password = ? where id = ?`
+	_, err := m.DB.ExecContext(ctx, query, hash, u.ID)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
