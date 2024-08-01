@@ -6,6 +6,7 @@ import (
 	"ecommerce/internal/encryption"
 	"ecommerce/internal/models"
 	"ecommerce/internal/urlsigner"
+	"ecommerce/internal/validator"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -138,6 +139,14 @@ func (app *application) CreateCustomerAndSubscribe(w http.ResponseWriter, r *htt
 
 	if err != nil {
 		app.errorLog.Println(err)
+		return
+	}
+
+	v := validator.New()
+	v.Check(len(data.FirstName) > 1, "first_name", "First Name must be at least 2 characters")
+
+	if !v.IsValid() {
+		app.FailedValidation(w, r, v.Errors)
 		return
 	}
 

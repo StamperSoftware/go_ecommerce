@@ -23,8 +23,9 @@ Bronze Plan
         <hr>
         
         <div class="mb-3">
-            <label for="first-name" class="form-label">First Name</label>
-            <input type="text" class="form-control" id="first-name" name="first-name" required autocomplete="first-name-new">
+            <label for="first_name" class="form-label">First Name</label>
+            <input type="text" class="form-control" id="first_name" name="first_name" required autocomplete="first_name-new">
+            <div class="valid-feedback" id="first_name-help"></div>
         </div>
         <div class="mb-3">
             <label for="last-name" class="form-label">Last Name</label>
@@ -138,7 +139,7 @@ Bronze Plan
                     card_brand : result.paymentMethod.card.brand,
                     exp_month : result.paymentMethod.card.exp_month,
                     exp_year : result.paymentMethod.card.exp_year,
-                    first_name : document.getElementById("first-name").value,
+                    first_name : document.getElementById("first_name").value,
                     last_name : document.getElementById("last-name").value,
                     amount : document.getElementById("amount").value,
                 }
@@ -155,11 +156,27 @@ Bronze Plan
                 fetch("{{.API}}/create-customer-and-subscribe", requestOptions)
                     .then(response => response.json())
                     .then((data) => {
-                        console.log(data);
+                        
+                        if (data.error) {
+                            document.getElementById("charge-form").classList.remove("was-validated")
+                            Object.entries(data.errors).forEach(error => {
+                                const [key, value]=error;
+                                const field = document.getElementById(key);
+                                const fieldHelper = document.getElementById(`${key}-help`);
+                                
+                                field.classList.add('is-invalid');
+                                fieldHelper.classList.remove('valid-feedback');
+                                fieldHelper.classList.add('invalid-feedback');
+                                fieldHelper.innerText = value;
+                            })
+                            showPayButton();
+                            return;
+                        }
+                        
                         processing.classList.add('d-none');
                         
                         showCardSuccess();
-                        sessionStorage.first_name = document.getElementById("first-name").value;
+                        sessionStorage.first_name = document.getElementById("first_name").value;
                         sessionStorage.last_name = document.getElementById("last-name").value;
                         sessionStorage.last_four = result.paymentMethod.card.last4;
                         sessionStorage.amount = "{{formatCurrency $widget.Price}}";
