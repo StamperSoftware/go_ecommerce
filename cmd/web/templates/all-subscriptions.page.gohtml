@@ -21,14 +21,53 @@ All Subscriptions
         <tbody>
         
         </tbody>
-    </table>
+    </table>   
+    <nav>
+        <ul id="paginator" class="pagination">
+            
+        </ul>
+    </nav>
 {{end}}
 
     
 {{define "js"}}
 <script>
+let currentPage = 1;
+const pageSize = 3;
+
+document.addEventListener("DOMContentLoaded", ()=>{updateTable()})
+
+const paginator = (pages, curPage) => {
+    const ul = document.getElementById("paginator");
+    let html = `<li class="page-item"><a href="#" class="page-link pager" data-page="${curPage-1}">&lt;</a></li>`
+    for (let i = 0; i <= pages; i++) {
+        html += `<li class="page-item"><a href="#" class="page-link pager" data-page="${i+1}">${i+1}</a></li>`
+    }
+    html += `<li class="page-item"><a href="#" class="page-link pager" data-page="${curPage+1}">&gt;</a></li>`
+    
+    ul.innerHTML = html;
+    const pageBtns = document.getElementsByClassName("pager")
+    
+    for (let i=0; i <pageBtns.length; i++) {
+        pageBtns[i].addEventListener("click", (evt)=>{
+            let page = evt.target.getAttribute("data-page");
+            if (page >0 && page <= pages+1) {
+                currentPage = page
+                updateTable()
+            }
+        })
+    }
+}
+
+const updateTable = () => {
+    
     const token = localStorage.getItem("token");
     const tbody = document.getElementById("subscriptions-table").getElementsByTagName("tbody")[0];
+    tbody.innerHTML = '';
+    const requestBody = {
+        page_size : parseInt(pageSize),
+        page : parseInt(currentPage),
+    }
     
     const requestOptions = {
         method : "post",
@@ -37,22 +76,23 @@ All Subscriptions
             "Content-Type" : "application/json",
             "Authorization" : `Bearer ${token}`,
         },
+        body : JSON.stringify(requestBody)
     }
     
     fetch("{{.API}}/admin/all-subscriptions", requestOptions)
         .then(response => response.json())
-        .then(sales => {
+        .then(data => {
 
             
-            if (!sales) {
+            if (!data?.orders) {
                 let newRow = tbody.insertRow();
                 let newCell = newRow.insertCell();
-                newCell.setAttribute("colspan", "4")
+                newCell.setAttribute("colspan", "5")
                 newCell.innerHTML = "No data available"
                 return
             }
             
-            sales.forEach(sale => {
+            data.orders.forEach(sale => {
                 let newRow = tbody.insertRow();
                 let newCell = newRow.insertCell();
                 
@@ -80,7 +120,11 @@ All Subscriptions
                 
                 
             })
+            
+            paginator(data.last_page, data.current_page)
+            
         })
+}
 
 </script>
     
