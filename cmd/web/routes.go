@@ -9,6 +9,7 @@ func (app *application) routes() http.Handler {
 	mux := chi.NewRouter()
 	mux.Use(SessionLoad)
 	mux.Get("/", app.Home)
+	mux.Get("/ws", app.WsEndpoint)
 	mux.Get("/logout", app.Logout)
 	mux.Get("/login", app.Login)
 	mux.Post("/login", app.PostLogin)

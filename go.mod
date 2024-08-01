@@ -16,6 +16,7 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/alexedwards/scs/mysqlstore v0.0.0-20240316134038-7e11d57e8885 // indirect
 	github.com/bwmarrin/go-alone v0.0.0-20190806015146-742bb55d1631 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/toorop/go-dkim v0.0.0-20201103131630-e1cd1a0a5208 // indirect
 	github.com/xhit/go-simple-mail/v2 v2.16.0 // indirect

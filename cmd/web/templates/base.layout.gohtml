@@ -81,7 +81,34 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <script>
+  
+      {{if eq .IsAuthenticated true}}
+        let socket;
+        document.addEventListener("DOMContentLoaded", ()=>{
+          socket = new WebSocket("ws://localhost:4000/ws")
+          socket.onmessage = (msg) => {
+            const data = JSON.parse(msg.data)
+            switch(data.action){
+              case "logout":
+                if (data.user_id === {{.UserID}}) {
+                  logout();
+                }
+                break;
+              default:
+                break;
+            }
+          }
+          
+        })
       
+      {{end}}
+      
+      const logout = ()=>{
+        localStorage.removeItem("token");
+        localStorage.removeItem("token_expiry");
+        location.href = "/logout";
+      }
+        
       const checkAuth = () => {
         const token = localStorage.getItem("token");
         if (token === null) {
