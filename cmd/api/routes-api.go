@@ -32,6 +32,11 @@ func (app *application) routes() http.Handler {
 		mux.Post("/all-subscriptions", app.AllSubscriptions)
 		mux.Post("/refund", app.Refund)
 		mux.Post("/cancel-subscription", app.CancelSubscription)
+
+		mux.Post("/all-users", app.AllUsers)
+		mux.Post("/users/{id}", app.User)
+		mux.Put("/users/{id}", app.UpdateUser)
+		mux.Delete("/users/{id}", app.DeleteUser)
 	})
 
 	return mux

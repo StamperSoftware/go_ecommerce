@@ -1,0 +1,160 @@
+{{template "base" .}}
+{{define "title"}}Admin User{{end}}
+{{define "content"}}
+<h2 class="mt-5">Admin User</h2>
+<hr>
+
+<form action="" method="post" name="user_form" id="user_form" class="needs-validation" autocomplete="off" novalidate="">
+    <div class="mb-3">
+        <label for="first_name" class="form-label">First Name</label>
+        <input type="text" class="form-control" id="first_name" name="first_name" required="" autocomplete="first_name-new">
+    </div>
+    <div class="mb-3">
+        <label for="last_name" class="form-label">Last Name</label>
+        <input type="text" class="form-control" id="last_name" name="last_name" required="" autocomplete="last_name-new">
+    </div>
+    <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input type="text" class="form-control" id="email" name="email" required="" autocomplete="email-new">
+    </div>
+    <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" name="password" autocomplete="password-new">
+    </div>
+    <div class="mb-3">
+        <label for="verify-password" class="form-label">Verify Password</label>
+        <input type="password" class="form-control" id="verify-password" name="verify-password" autocomplete="verify-password-new">
+    </div>
+    <hr>
+    
+    <div class="float-start">
+        <a href="javascript:void(0);" class="btn btn-primary" onclick="saveUser()" id="save-btn">Save Changes</a>
+        <a href="/admin/all-users" class="btn btn-warning" id="cancel-btn">Cancel</a>
+    </div>
+    <div class="float-end">
+        <a href="javascript:void(0);" class="btn btn-danger d-none" id="delete-btn">Delete</a>
+    </div>
+</form>
+{{end}}
+
+{{define "js"}}
+    <script>
+        const token = localStorage.getItem('token');
+        const id = window.location.pathname.split("/").pop();
+        
+        const deleteBtn = document.getElementById('delete-btn');
+        
+        
+        document.addEventListener("DOMContentLoaded", ()=>{
+            if (parseInt(id) === 0) {
+                return
+            }
+            
+            if (id !== '{{.UserID}}') {
+                deleteBtn.classList.remove('d-none');
+            }
+            
+            const requestOptions = {
+                method : "post",
+                headers : {
+                    "Accept" : "application/json",
+                    "Content-Type" : "application/json",
+                    "Authorization" : `Bearer ${token}`,
+                },
+            }
+            
+            fetch(`{{.API}}/admin/users/${id}`, requestOptions)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('first_name').value = data.first_name;
+                    document.getElementById('last_name').value = data.last_name;
+                    document.getElementById('email').value = data.email;
+                })
+            
+        })
+        
+        deleteBtn.addEventListener('click', ()=>{
+            Swal.fire({
+                title: "Are you sure?",
+                text: "You won't be able to undo this!",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Delete User"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const requestOptions = {
+                        method:'delete',
+                        headers: {
+                            "Accept" : "application/json",
+                            "Content-Type" : "application/json",
+                            "Authorization" : `Bearer ${token}`,
+                        },
+                    }
+                    
+                    fetch(`{{.API}}/admin/users/${id}`, requestOptions)
+                        .then(response => response.json())
+                        .then((data)=>{
+                            if (data.error) {
+                                Swal.fire(`Error: ${data.message}`)
+                            } else {
+                                location.href = "/admin/all-users"
+                            }
+                        })
+                }
+            })
+        })
+            
+        const saveUser = () => {
+            const form = document.getElementById("user_form");
+            if (form.checkValidity() === false) {
+                this.event.preventDefault();
+                this.event.stopPropagation();
+                
+                form.classList.add('was-validated');
+                return;
+            }
+            form.classList.add('was-validated');
+            const password = document.getElementById('password').value;
+            const verifyPassword = document.getElementById('verify-password').value;
+            const firstName = document.getElementById('first_name').value;
+            const lastName = document.getElementById('last_name').value;
+            const email = document.getElementById('email').value;
+            if (password !== verifyPassword) {
+                Swal.fire('Passwords do not match!')
+                return
+            }
+            
+            const payload = {
+                id:parseInt(id, 10),
+                first_name:firstName,
+                last_name:lastName,
+                email,
+                password,
+            }
+            
+            const requestOptions = {
+                method:'put',
+                headers: {
+                    "Accept" : "application/json",
+                    "Content-Type" : "application/json",
+                    "Authorization" : `Bearer ${token}`,
+                },
+                body : JSON.stringify(payload)
+            }
+            
+            fetch(`{{.API}}/admin/users/${id}`, requestOptions)
+                .then(response => response.json())
+                .then((data)=>{
+                    if (data.error) {
+                        Swal.fire(`Error: ${data.message}`)
+                    } else {
+                        location.href = "/admin/all-users"
+                    }
+                })
+            
+        }
+            
+    </script>
+{{end}}

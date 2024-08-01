@@ -408,3 +408,17 @@ func (app *application) Subscription(w http.ResponseWriter, r *http.Request) {
 		app.errorLog.Println(err)
 	}
 }
+
+func (app *application) AllUsers(w http.ResponseWriter, r *http.Request) {
+
+	if err := app.renderTemplate(w, r, "all-users", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
+
+func (app *application) User(w http.ResponseWriter, r *http.Request) {
+
+	if err := app.renderTemplate(w, r, "user", &templateData{}); err != nil {
+		app.errorLog.Println(err)
+	}
+}
