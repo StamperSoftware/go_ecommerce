@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"ecommerce/internal/cards"
 	"ecommerce/internal/encryption"
 	"ecommerce/internal/models"
@@ -119,6 +120,17 @@ func (app *application) GetWidgetByID(w http.ResponseWriter, r *http.Request) {
 
 }
 
+type Invoice struct {
+	ID        int       `json:"id"`
+	Quantity  int       `json:"quantity"`
+	Amount    int       `json:"amount"`
+	Product   string    `json:"product"`
+	CreatedAt time.Time `json:"created_at"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	Email     string    `json:"email"`
+}
+
 func (app *application) CreateCustomerAndSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	var data stripePayload
@@ -154,8 +166,6 @@ func (app *application) CreateCustomerAndSubscribe(w http.ResponseWriter, r *htt
 			okay = false
 			txnMessage = "Error Subscribing Customer"
 		}
-
-		app.infoLog.Println("Subscription id, ", sub.ID)
 	}
 
 	if okay {
@@ -196,13 +206,28 @@ func (app *application) CreateCustomerAndSubscribe(w http.ResponseWriter, r *htt
 			Amount:        amount,
 		}
 
-		_, err = app.SaveOrder(order)
+		newOrderId, err := app.SaveOrder(order)
 
 		if err != nil {
 			app.errorLog.Println(err)
 			return
 		}
 
+		inv := Invoice{
+			ID:        newOrderId,
+			Quantity:  order.Quantity,
+			Amount:    order.Amount,
+			Product:   "Bronze Plan Subscription",
+			CreatedAt: time.Now(),
+			FirstName: data.FirstName,
+			LastName:  data.LastName,
+			Email:     data.Email,
+		}
+		err = app.callInvoiceMicro(inv)
+
+		if err != nil {
+			app.errorLog.Println(err)
+		}
 	}
 
 	resp := jsonResponse{
@@ -219,6 +244,33 @@ func (app *application) CreateCustomerAndSubscribe(w http.ResponseWriter, r *htt
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(out)
 
+}
+
+func (app *application) callInvoiceMicro(inv Invoice) error {
+	url := "http://localhost:5000/invoice/create-and-send"
+
+	out, err := json.MarshalIndent(inv, "", "\t")
+	if err != nil {
+		return err
+	}
+
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(out))
+
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(request)
+
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
 }
 
 func (app *application) SaveCustomer(firstName, lastName, email string) (int, error) {

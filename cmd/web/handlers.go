@@ -1,14 +1,17 @@
 ﻿package main
 
 import (
+	"bytes"
 	"ecommerce/internal/cards"
 	"ecommerce/internal/encryption"
 	"ecommerce/internal/models"
 	"ecommerce/internal/urlsigner"
+	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func (app *application) VirtualTerminal(w http.ResponseWriter, r *http.Request) {
@@ -139,6 +142,17 @@ func (app *application) GetTransactionData(r *http.Request) (TransactionData, er
 	return txnData, nil
 }
 
+type Invoice struct {
+	ID        int       `json:"id"`
+	Quantity  int       `json:"quantity"`
+	Amount    int       `json:"amount"`
+	Product   string    `json:"product"`
+	CreatedAt time.Time `json:"created_at"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	Email     string    `json:"email"`
+}
+
 func (app *application) PaymentSucceeded(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseForm()
@@ -196,15 +210,59 @@ func (app *application) PaymentSucceeded(w http.ResponseWriter, r *http.Request)
 		Amount:        txnData.PaymentAmount,
 	}
 
-	_, err = app.SaveOrder(order)
+	newOrderId, err := app.SaveOrder(order)
 
 	if err != nil {
 		app.errorLog.Println(err)
 		return
 	}
 
+	inv := Invoice{
+		ID:        newOrderId,
+		Quantity:  order.Quantity,
+		Amount:    order.Amount,
+		Product:   "Widget",
+		CreatedAt: time.Now(),
+		FirstName: txnData.FirstName,
+		LastName:  txnData.LastName,
+		Email:     txnData.Email,
+	}
+
+	err = app.callInvoiceMicro(inv)
+
+	if err != nil {
+		app.errorLog.Println(err)
+	}
+
 	app.Session.Put(r.Context(), "receipt", txnData)
 	http.Redirect(w, r, "/receipt", http.StatusSeeOther)
+}
+
+func (app *application) callInvoiceMicro(inv Invoice) error {
+	url := "http://localhost:5000/invoice/create-and-send"
+
+	out, err := json.MarshalIndent(inv, "", "\t")
+	if err != nil {
+		return err
+	}
+
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(out))
+
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(request)
+
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
 }
 
 func (app *application) SaveCustomer(firstName, lastName, email string) (int, error) {
